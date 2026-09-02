@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Login - Painel Administrativo</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename=perfil.foto) }}">
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #f2efe9; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .login-box { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 300px; text-align: center; }
+        h2 { color: #3d6a9a; margin-bottom: 20px; font-family: Georgia, serif; }
+        input { width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; }
+        button { width: 100%; padding: 10px; background: #3d6a9a; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; }
+        .erro { color: red; font-size: 13px; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+    <div class="login-box">
+        <h2>Área Restrita</h2>
+        {% if erro %}<div class="erro">{{ erro }}</div>{% endif %}
+        <form method="POST">
+            <input type="password" name="senha" placeholder="Digite a senha" required autofocus>
+            <button type="submit">Entrar</button>
+        </form>
+    </div>
+</body>
+</html>

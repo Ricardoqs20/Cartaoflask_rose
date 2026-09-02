@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <!-- ESSA LINHA ABAIXO BLOQUEIA O IPHONE DE TRANSFORMAR NÚMEROS EM LINKS AZUIS -->
+    <meta name="format-detection" content="telephone=no">
+    <title>Painel Administrativo - {{ perfil.nome }}</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='balao_remax_icon.png') }}">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='balao_remax_icon.png') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f4f4f4; padding: 15px; margin: 0; }
+        .container { width: 100%; max-width: 600px; margin: 0 auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        
+        .admin-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 12px; margin-bottom: 20px; }
+        .admin-title { color: #3d6a9a; font-size: 18px; font-weight: bold; margin: 0; }
+        .admin-nav { display: flex; gap: 8px; }
+        .btn-nav { padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; text-decoration: none; display: flex; align-items: center; gap: 5px; }
+        .btn-site { background: #f0f0f0; color: #333; }
+        .btn-site:hover { background: #e0e0e0; }
+        .btn-sair { background: #ffebee; color: #c62828; }
+        .btn-sair:hover { background: #ffcdd2; }
+
+        .btn-add { display: block; width: 100%; padding: 14px; background: #3d6a9a; color: white; text-align: center; border-radius: 8px; text-decoration: none; font-weight: bold; margin-bottom: 20px; transition: 0.2s; }
+        .btn-add:hover { background: #451214; }
+        
+        .imovel-card { display: flex; align-items: center; background: white; padding: 12px; border-radius: 8px; margin-bottom: 12px; border: 1px solid #eee; }
+        .imovel-img { width: 75px; height: 75px; object-fit: cover; border-radius: 6px; margin-right: 12px; }
+        .imovel-info { flex-grow: 1; min-width: 0; }
+        .imovel-titulo { font-weight: bold; color: #333; margin: 0 0 4px 0; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .imovel-preco { color: #3d6a9a !important; font-size: 13px; font-weight: bold; margin: 0 0 2px 0; text-decoration: none !important; }
+        .imovel-negocio { font-size: 11px; text-transform: uppercase; color: #777; font-weight: 600; }
+        
+        .acoes { display: flex; flex-direction: column; gap: 6px; margin-left: 10px; }
+        .btn-acao { padding: 6px 12px; border-radius: 4px; font-size: 12px; text-decoration: none; text-align: center; font-weight: bold; }
+        .btn-editar { background: #e0e0e0; color: #333; }
+        .btn-excluir { background: #f8d7da; color: #721c24; }
+        
+        .vazio-msg { text-align: center; color: #888; padding: 30px 10px; font-size: 14px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="admin-header">
+        <div class="admin-title">Painel de Imóveis</div>
+        <div class="admin-nav">
+            <a href="/" target="_blank" class="btn-nav btn-site" title="Ver site público"><i class="fa-solid fa-arrow-up-right-from-square"></i> Ver Site</a>
+            <a href="/admin/logout" class="btn-nav btn-sair" title="Sair do painel"><i class="fa-solid fa-right-from-bracket"></i> Sair</a>
+        </div>
+    </div>
+    
+    <a href="/admin/adicionar" class="btn-add"><i class="fa-solid fa-plus"></i> Adicionar Novo Imóvel</a>
+
+    {% if imoveis %}
+        {% for imovel in imoveis %}
+        <div class="imovel-card">
+            <img src="/static/{{ imovel.imagem }}" class="imovel-img" alt="Foto">
+            <div class="imovel-info">
+                <p class="imovel-titulo">{{ imovel.titulo }}</p>
+                <p class="imovel-preco">R$ {{ "{:,.0f}".format(imovel.preco_num | float).replace(',', '.') }}</p>
+                <span class="imovel-negocio">Finalidade: {{ imovel.negocio | capitalize }}</span>
+            </div>
+            <div class="acoes">
+                <a href="/admin/editar/{{ imovel.id }}" class="btn-acao btn-editar">Editar</a>
+                <a href="/admin/excluir/{{ imovel.id }}" class="btn-acao btn-excluir" onclick="return confirm('Tem certeza que deseja excluir este imóvel?')">Excluir</a>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="vazio-msg">
+            <i class="fa-solid fa-house-chimney" style="font-size: 32px; margin-bottom: 10px; display: block; color: #ccc;"></i>
+            Nenhum imóvel cadastrado ainda.<br>Clique no botão acima para adicionar o primeiro imóvel.
+        </div>
+    {% endif %}
+</div>
+
+</body>
+</html>

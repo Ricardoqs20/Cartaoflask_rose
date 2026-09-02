@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ perfil.nome }} - {{ perfil.cargo }}</title>
+    
+    <!-- FAVICON E ÍCONE DO APP MOBILE (PWA / ANDROID / IOS) -->
+    <link rel="icon" type="image/png" sizes="192x192" href="{{ url_for('static', filename='icon-192.png') }}">
+    <link rel="icon" type="image/png" sizes="512x512" href="{{ url_for('static', filename='icon-512.png') }}">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='balao_remax_icon.png') }}">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#3d6a9a">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="{{ perfil.nome }}">
+
+    <!-- META TAGS OPEN GRAPH (PREVIEW NO WHATSAPP E REDES SOCIAIS) -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="{{ perfil.nome }} - {{ perfil.cargo }}{% if perfil.corretora %} | {{ perfil.corretora }}{% endif %}">
+    <meta property="og:description" content="{{ perfil.nome }} - {{ perfil.cargo }}{% if perfil.corretora %} | {{ perfil.corretora }}{% endif %}">
+    <meta property="og:image" content="{{ request.url_root.rstrip('/') }}{{ url_for('static', filename=perfil.foto) }}">
+    <meta property="og:url" content="{{ request.url }}">
+    <meta name="twitter:card" content="summary_large_image">
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=24">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        /* Estilos dos Filtros (Venda / Aluguel) */
+        .filter-container {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            width: 100%;
+        }
+
+        .filter-btn {
+            flex: 1;
+            padding: 10px 16px;
+            border-radius: 8px;
+            border: 2px solid #3d6a9a;
+            background: transparent;
+            color: #3d6a9a;
+            font-weight: bold;
+            font-size: 13px;
+            text-align: center;
+            text-decoration: none;
+            transition: 0.2s;
+            cursor: pointer;
+            font-family: inherit;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+
+        .filter-btn.active {
+            background: #3d6a9a;
+            color: white;
+        }
+
+        .filter-btn.disabled {
+            cursor: default;
+            pointer-events: none;
+        }
+
+        /* Botão compartilhar com visual de action-item */
+        button.action-item {
+            border: none;
+            background: transparent;
+            font-family: inherit;
+            cursor: pointer;
+            -webkit-appearance: none;
+            appearance: none;
+            padding: 0;
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="card-container">
+        
+        <!-- Header -->
+        <header class="hero-section" style="--bg-url: url('{{ url_for('static', filename=perfil.foto) }}');">
+            <div class="top-bar">
+                <div class="logo-remax">
+                    <img src="{{ url_for('static', filename=perfil.logo) }}" alt="{{ perfil.nome }}" class="logo-topo">
+                </div>
+            </div>
+
+            <div class="profile-info">
+                <h1 style="font-size: 34px; text-shadow: 0px 2px 5px rgba(0, 0, 0, 0.8);">
+                    {{ perfil.nome }}
+                    <span style="display: block; font-size: 15px; font-weight: 600; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; text-transform: uppercase; letter-spacing: 1.2px; color: #ffffff; text-shadow: 0px 2px 4px rgba(0, 0, 0, 0.8); margin-top: 6px;">
+                        {{ perfil.cargo }}
+                    </span>
+                </h1>
+                <div class="blue-line"></div>
+            </div>
+        </header>
+
+        <!-- Seção de Imóveis -->
+        <main class="content-section">
+            <div class="section-title">
+                <i class="fa-solid fa-house" id="secretAdminBtn" style="cursor: pointer; -webkit-tap-highlight-color: transparent;"></i>
+                <h2>Imóveis disponíveis</h2>
+            </div>
+
+            <!-- FILTRO DE VENDA / ALUGUEL INTELIGENTE (sem reload) -->
+            {% if tem_venda or tem_aluguel %}
+            <div class="filter-container">
+                {% if tem_venda and tem_aluguel %}
+                    <button type="button" class="filter-btn {% if aba_ativa == 'venda' %}active{% endif %}" data-negocio="venda">Venda</button>
+                    <button type="button" class="filter-btn {% if aba_ativa == 'aluguel' %}active{% endif %}" data-negocio="aluguel">Aluguel</button>
+                {% elif tem_venda %}
+                    <span class="filter-btn active disabled">Venda</span>
+                {% elif tem_aluguel %}
+                    <span class="filter-btn active disabled">Aluguel</span>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            <!-- Lista de Venda -->
+            <div id="lista-venda" class="lista-negocio"{% if aba_ativa != 'venda' %} style="display: none;"{% endif %}>
+            {% set qtd_venda = imoveis_venda | length if imoveis_venda is defined and imoveis_venda else 0 %}
+            {% if qtd_venda > 4 %}
+                <div class="property-scroll" id="propertyScrollVenda">
+                    <div class="property-grid">
+                        {% for pagina in imoveis_venda | batch(4) %}
+                        <div class="property-page">
+                            {% for imovel in pagina %}
+                            {% set bg_img = imovel.imagem if imovel.imagem.startswith('http') else url_for('static', filename=imovel.imagem) %}
+                            {% set target_url = imovel.link if imovel.link else url_for('detalhe_imovel', id=imovel.id) %}
+                            <div class="property-card" style="background-image: url('{{ bg_img }}');">
+                                <div class="card-overlay">
+                                    <h3>{{ imovel.titulo }}</h3>
+                                    <div class="card-divider"></div>
+                                    <p class="price">{{ imovel.preco }}</p>
+                                    <p class="location">{{ imovel.localizacao }}</p>
+                                    <a href="{{ target_url }}" class="arrow-btn" aria-label="Ver {{ imovel.titulo }}">
+                                        <i class="fa-solid fa-arrow-right"></i>
+                                    </a>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="carousel-dots" id="carouselDotsVenda"></div>
+            {% elif qtd_venda > 0 %}
+                <div class="property-grid-estatico">
+                    {% for imovel in imoveis_venda %}
+                    {% set bg_img = imovel.imagem if imovel.imagem.startswith('http') else url_for('static', filename=imovel.imagem) %}
+                    {% set target_url = imovel.link if imovel.link else url_for('detalhe_imovel', id=imovel.id) %}
+                    <div class="property-card" style="background-image: url('{{ bg_img }}');">
+                        <div class="card-overlay">
+                            <h3>{{ imovel.titulo }}</h3>
+                            <div class="card-divider"></div>
+                            <p class="price">{{ imovel.preco }}</p>
+                            <p class="location">{{ imovel.localizacao }}</p>
+                            <a href="{{ target_url }}" class="arrow-btn" aria-label="Ver {{ imovel.titulo }}">
+                                <i class="fa-solid fa-arrow-right"></i>
+                            </a>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p style="color: #666; font-size: 14px; text-align: center; margin: 15px 0;">Nenhum imóvel disponível nesta categoria no momento.</p>
+            {% endif %}
+            </div>
+
+            <!-- Lista de Aluguel -->
+            <div id="lista-aluguel" class="lista-negocio"{% if aba_ativa != 'aluguel' %} style="display: none;"{% endif %}>
+            {% set qtd_aluguel = imoveis_aluguel | length if imoveis_aluguel is defined and imoveis_aluguel else 0 %}
+            {% if qtd_aluguel > 4 %}
+                <div class="property-scroll" id="propertyScrollAluguel">
+                    <div class="property-grid">
+                        {% for pagina in imoveis_aluguel | batch(4) %}
+                        <div class="property-page">
+                            {% for imovel in pagina %}
+                            {% set bg_img = imovel.imagem if imovel.imagem.startswith('http') else url_for('static', filename=imovel.imagem) %}
+                            {% set target_url = imovel.link if imovel.link else url_for('detalhe_imovel', id=imovel.id) %}
+                            <div class="property-card" style="background-image: url('{{ bg_img }}');">
+                                <div class="card-overlay">
+                                    <h3>{{ imovel.titulo }}</h3>
+                                    <div class="card-divider"></div>
+                                    <p class="price">{{ imovel.preco }}</p>
+                                    <p class="location">{{ imovel.localizacao }}</p>
+                                    <a href="{{ target_url }}" class="arrow-btn" aria-label="Ver {{ imovel.titulo }}">
+                                        <i class="fa-solid fa-arrow-right"></i>
+                                    </a>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="carousel-dots" id="carouselDotsAluguel"></div>
+            {% elif qtd_aluguel > 0 %}
+                <div class="property-grid-estatico">
+                    {% for imovel in imoveis_aluguel %}
+                    {% set bg_img = imovel.imagem if imovel.imagem.startswith('http') else url_for('static', filename=imovel.imagem) %}
+                    {% set target_url = imovel.link if imovel.link else url_for('detalhe_imovel', id=imovel.id) %}
+                    <div class="property-card" style="background-image: url('{{ bg_img }}');">
+                        <div class="card-overlay">
+                            <h3>{{ imovel.titulo }}</h3>
+                            <div class="card-divider"></div>
+                            <p class="price">{{ imovel.preco }}</p>
+                            <p class="location">{{ imovel.localizacao }}</p>
+                            <a href="{{ target_url }}" class="arrow-btn" aria-label="Ver {{ imovel.titulo }}">
+                                <i class="fa-solid fa-arrow-right"></i>
+                            </a>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p style="color: #666; font-size: 14px; text-align: center; margin: 15px 0;">Nenhum imóvel disponível nesta categoria no momento.</p>
+            {% endif %}
+            </div>
+        </main>
+
+        <!-- Rodapé de Ações -->
+        <footer class="action-bar">
+            <a href="https://wa.me/{{ perfil.whatsapp }}" target="_blank" class="action-item">
+                <i class="fa-brands fa-whatsapp icon"></i>
+                <span>WhatsApp</span>
+            </a>
+            <div class="vertical-divider"></div>
+            <a href="{{ perfil.instagram }}" target="_blank" class="action-item">
+                <i class="fa-brands fa-instagram icon"></i>
+                <span>Instagram</span>
+            </a>
+            <div class="vertical-divider"></div>
+            <a href="{{ perfil.website }}" target="_blank" class="action-item">
+                <i class="fa-solid fa-globe icon"></i>
+                <span>Website</span>
+            </a>
+            <div class="vertical-divider"></div>
+            <button type="button" id="btnCompartilhar" class="action-item">
+                <i class="fa-solid fa-share-nodes icon"></i>
+                <span>Compartilhar</span>
+            </button>
+        </footer>
+    </div>
+
+    <script>
+        function compartilharSite() {
+            var urlAtual = window.location.href;
+            var texto = 'Confira o meu cartão de visitas digital com os melhores imóveis!';
+            var titulo = 'Cartão Digital - {{ perfil.nome }}';
+
+            // Menu nativo: iOS / Android / Windows (Chrome, Edge, Safari)
+            if (typeof navigator.share === 'function') {
+                var dados = { title: titulo, text: texto, url: urlAtual };
+                var tentativa;
+
+                if (navigator.canShare) {
+                    if (navigator.canShare(dados)) {
+                        tentativa = navigator.share(dados);
+                    } else if (navigator.canShare({ url: urlAtual, text: texto })) {
+                        tentativa = navigator.share({ url: urlAtual, text: texto });
+                    } else if (navigator.canShare({ url: urlAtual })) {
+                        tentativa = navigator.share({ url: urlAtual });
+                    } else {
+                        tentativa = navigator.share(dados);
+                    }
+                } else {
+                    tentativa = navigator.share(dados);
+                }
+
+                tentativa.catch(function (err) {
+                    // Cancelou o menu: não faz nada
+                    if (err && (err.name === 'AbortError' || err.name === 'NotAllowedError')) return;
+                    // Falhou de verdade: tenta só a URL
+                    navigator.share({ url: urlAtual }).catch(function () {
+                        copiarFallback(urlAtual);
+                    });
+                });
+                return;
+            }
+
+            // Sem suporte a share nativo
+            copiarFallback(urlAtual);
+        }
+
+        function copiarFallback(texto) {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(texto).then(function () {
+                    alert('Link copiado para a área de transferência!');
+                }).catch(function () {
+                    forcarCopiaManual(texto);
+                });
+            } else {
+                forcarCopiaManual(texto);
+            }
+        }
+
+        function forcarCopiaManual(texto) {
+            var input = document.createElement('input');
+            input.value = texto;
+            document.body.appendChild(input);
+            input.select();
+            try {
+                document.execCommand('copy');
+                alert('Link copiado com sucesso!');
+            } catch (err) {
+                prompt('Copie o link abaixo:', texto);
+            }
+            document.body.removeChild(input);
+        }
+
+        // Clique no botão (gesture do usuário — obrigatório para o menu nativo)
+        var btnShare = document.getElementById('btnCompartilhar');
+        if (btnShare) {
+            btnShare.addEventListener('click', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                compartilharSite();
+            });
+        }
+
+        function initCarousel(scrollId, dotsId) {
+            var scrollContainer = document.getElementById(scrollId);
+            var dotsContainer = document.getElementById(dotsId);
+            if (!scrollContainer || !dotsContainer) return;
+            if (dotsContainer.children.length > 0) return;
+
+            var pages = scrollContainer.querySelectorAll('.property-page');
+            pages.forEach(function (_, index) {
+                var dot = document.createElement('div');
+                dot.classList.add('dot');
+                if (index === 0) dot.classList.add('active');
+                dotsContainer.appendChild(dot);
+            });
+
+            var dots = dotsContainer.querySelectorAll('.dot');
+            scrollContainer.addEventListener('scroll', function () {
+                var firstPage = scrollContainer.querySelector('.property-page');
+                var pageWidth = firstPage ? firstPage.offsetWidth + 16 : scrollContainer.clientWidth;
+                var scrollPosition = scrollContainer.scrollLeft;
+                var activeIndex = Math.round(scrollPosition / pageWidth);
+                dots.forEach(function (dot, index) {
+                    if (index === activeIndex) {
+                        dot.classList.add('active');
+                    } else {
+                        dot.classList.remove('active');
+                    }
+                });
+            });
+        }
+
+        initCarousel('propertyScrollVenda', 'carouselDotsVenda');
+        initCarousel('propertyScrollAluguel', 'carouselDotsAluguel');
+
+        // Filtro Venda/Aluguel sem recarregar a página
+        document.querySelectorAll('.filter-btn[data-negocio]').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var negocio = this.getAttribute('data-negocio');
+                document.querySelectorAll('.filter-btn[data-negocio]').forEach(function (b) {
+                    b.classList.remove('active');
+                });
+                this.classList.add('active');
+
+                var listaVenda = document.getElementById('lista-venda');
+                var listaAluguel = document.getElementById('lista-aluguel');
+                if (negocio === 'venda') {
+                    listaVenda.style.display = '';
+                    listaAluguel.style.display = 'none';
+                } else {
+                    listaAluguel.style.display = '';
+                    listaVenda.style.display = 'none';
+                    var scrollAluguel = document.getElementById('propertyScrollAluguel');
+                    if (scrollAluguel) scrollAluguel.dispatchEvent(new Event('scroll'));
+                }
+            });
+        });
+
+        // GESTO SECRETO: 3 toques rápidos no ícone da casinha abrem o painel admin
+        var adminTapCount = 0;
+        var adminTapTimer = null;
+        var secretAdminBtn = document.getElementById('secretAdminBtn');
+
+        if (secretAdminBtn) {
+            secretAdminBtn.addEventListener('click', function () {
+                adminTapCount++;
+                clearTimeout(adminTapTimer);
+
+                if (adminTapCount >= 3) {
+                    adminTapCount = 0;
+                    window.location.href = '/admin';
+                } else {
+                    adminTapTimer = setTimeout(function () {
+                        adminTapCount = 0;
+                    }, 700);
+                }
+            });
+        }
+
+        // REGISTRO DO SERVICE WORKER (PWA NO ANDROID/IOS)
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function () {
+                navigator.serviceWorker.register('/sw.js').catch(function (err) {
+                    console.log('SW registration error:', err);
+                });
+            });
+        }
+    </script>
+</body>
+</html>

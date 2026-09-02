@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Editar Imóvel - {{ perfil.nome }}</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename=perfil.foto) }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f9f9f9; padding: 15px; margin: 0; }
+        .container { width: 100%; max-width: 500px; margin: 0 auto; background: white; padding: 25px 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+        h2 { color: #3d6a9a; margin-top: 0; text-align: center; font-size: 22px; }
+        
+        .form-group { display: flex; flex-direction: column; margin-bottom: 15px; }
+        label { font-size: 13px; font-weight: bold; margin-bottom: 5px; color: #333; }
+        input, textarea { padding: 12px; border: 1px solid #ccc; border-radius: 8px; font-size: 15px; width: 100%; font-family: inherit; }
+        
+        .radio-group { display: flex; gap: 10px; margin-bottom: 15px; }
+        .radio-option { flex: 1; text-align: center; }
+        .radio-option input { display: none; }
+        .radio-option label { display: block; padding: 12px; border: 2px solid #ccc; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 13px; color: #555; transition: 0.2s; }
+        .radio-option input:checked + label { border-color: #3d6a9a; background: #3d6a9a; color: white; }
+
+        .tipo-tag { background: #f0f0f0; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: bold; color: #3d6a9a; display: inline-block; margin-bottom: 15px; }
+        
+        .foto-preview-box { display: flex; justify-content: center; margin-bottom: 10px; }
+        #img_atual { width: 120px; height: 120px; object-fit: cover; border-radius: 10px; border: 1px solid #ddd; }
+
+        .crop-container { width: 100%; background: #111; padding: 15px; border-radius: 12px; margin-bottom: 20px; text-align: center; }
+        .crop-wrapper { width: 100%; max-height: 400px; overflow: hidden; margin-bottom: 15px; border-radius: 8px; }
+        #image-to-crop { max-width: 100%; display: block; }
+
+        .galeria-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 10px; }
+        .galeria-item { position: relative; }
+        .galeria-item img { width: 100%; height: 90px; object-fit: cover; border-radius: 6px; }
+        .btn-excluir-foto { position: absolute; top: 4px; right: 4px; background: rgba(220, 53, 69, 0.9); color: white; border: none; border-radius: 50%; width: 22px; height: 22px; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; text-decoration: none; }
+
+        button { width: 100%; padding: 14px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 15px; transition: 0.2s; }
+        .btn-salvar { background: #3d6a9a; color: white; margin-top: 10px; }
+        .btn-confirmar { background: #222; color: #fff; text-transform: uppercase; letter-spacing: 1px; font-size: 13px; }
+
+        .btn-voltar { display: block; text-align: center; margin-top: 20px; color: #3d6a9a; text-decoration: none; font-size: 14px; font-weight: 500; }
+        .help-text { font-size: 11px; color: #666; margin-top: 2px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Editar Imóvel</h2>
+        
+        <div style="text-align: center;">
+            <span class="tipo-tag">
+                {% if imovel.link %}
+                    Tipo: Link Existente
+                {% else %}
+                    Tipo: Imóvel Cadastrado
+                {% endif %}
+            </span>
+        </div>
+
+        <form id="form-editar" method="POST" enctype="multipart/form-data">
+            
+            <label>Finalidade:</label>
+            <div class="radio-group">
+                <div class="radio-option">
+                    <input type="radio" id="negocio_venda" name="negocio" value="venda" {% if imovel.negocio != 'aluguel' %}checked{% endif %}>
+                    <label for="negocio_venda">Venda</label>
+                </div>
+                <div class="radio-option">
+                    <input type="radio" id="negocio_aluguel" name="negocio" value="aluguel" {% if imovel.negocio == 'aluguel' %}checked{% endif %}>
+                    <label for="negocio_aluguel">Aluguel</label>
+                </div>
+            </div>
+
+            <!-- CAPA EXCLUSIVA -->
+            <div class="form-group">
+                <label>Foto de Capa Principal:</label>
+                <div class="foto-preview-box">
+                    <img id="img_atual" src="/static/{{ imovel.imagem }}" alt="Foto da Capa">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="input_foto">Trocar Foto de Capa:</label>
+                <input type="file" id="input_foto" accept="image/*">
+            </div>
+
+            <!-- Container do Corte -->
+            <div class="crop-container" id="cropBox" style="display: none;">
+                <div class="crop-wrapper">
+                    <img id="image-to-crop" src="">
+                </div>
+                <button type="button" id="btn-confirmar-corte" class="btn-confirmar">Cortar Capa</button>
+            </div>
+
+            <div class="form-group">
+                <label for="titulo_input">Título:</label>
+                <input type="text" id="titulo_input" name="titulo" value="{{ imovel.titulo }}" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="preco_input">Preço:</label>
+                <input type="text" id="preco_input" name="preco_num" value="{{ imovel.preco_num | int }}" required oninput="mascaraMoeda(this)">
+            </div>
+            
+            <div class="form-group">
+                <label for="localizacao_input">Localização:</label>
+                <input type="text" id="localizacao_input" name="localizacao" value="{{ imovel.localizacao }}" required>
+            </div>
+
+            {% if imovel.link %}
+            <div class="form-group">
+                <label for="input_link_externo">Link Externo do Imóvel:</label>
+                <input type="text" id="input_link_externo" name="link" value="{{ imovel.link }}" required>
+            </div>
+            {% else %}
+            <!-- GALERIA DE FOTOS ADICIONAIS -->
+            <div class="form-group">
+                <label>Galeria de Fotos Adicionais Já Cadastradas (<span id="count-cadastradas">{{ imovel.fotos|length if imovel.fotos else 0 }}</span> / 20):</label>
+                <div class="galeria-grid" id="galeria-grid" {% if not imovel.fotos %}style="display: none;"{% endif %}>
+                    {% if imovel.fotos %}
+                    {% for foto in imovel.fotos %}
+                    <div class="galeria-item" id="foto-item-{{ foto.id }}">
+                        <img src="/static/{{ foto.caminho }}" alt="Foto Galeria">
+                        <button type="button" class="btn-excluir-foto" onclick="excluirFotoAjax('{{ foto.id }}')" title="Excluir Foto">✕</button>
+                    </div>
+                    {% endfor %}
+                    {% endif %}
+                </div>
+                <p class="help-text" id="sem-fotos-msg" {% if imovel.fotos %}style="display: none;"{% endif %}>Nenhuma foto adicional cadastrada na galeria.</p>
+            </div>
+
+            <div class="form-group">
+                <label for="input_galeria_novas">Adicionar Novas Fotos à Galeria (Vagas disponíveis: <span id="vagas-disponiveis">{{ 20 - (imovel.fotos|length if imovel.fotos else 0) }}</span>):</label>
+                <input type="file" id="input_galeria_novas" name="fotos_galeria" accept="image/*" multiple>
+                <span class="help-text">O limite total é de 20 fotos. Se enviar mais fotos do que as vagas disponíveis, o sistema incluirá apenas as primeiras que cabem.</span>
+
+                <!-- Preview das novas fotos selecionadas -->
+                <div id="preview-novas-container" style="display: none; margin-top: 12px;">
+                    <label style="font-size: 12px; color: #555;">Novas fotos a serem adicionadas (<span id="novas-count">0</span>):</label>
+                    <div class="galeria-grid" id="preview-novas-grid"></div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="input_descricao">Descrição do Imóvel:</label>
+                <textarea id="input_descricao" name="descricao" rows="4" required>{{ imovel.descricao if imovel.descricao else '' }}</textarea>
+            </div>
+            {% endif %}
+
+            <button type="submit" class="btn-salvar">Salvar Alterações</button>
+        </form>
+        <a href="/admin" class="btn-voltar">← Voltar para o painel</a>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+    <script>
+        const LIMITE_MAXIMO = 20;
+        let cropper;
+        let imagemCortadaBlob = null;
+        let novasFotosDataTransfer = new DataTransfer();
+
+        const inputGaleriaNovas = document.getElementById('input_galeria_novas');
+        const previewNovasContainer = document.getElementById('preview-novas-container');
+        const previewNovasGrid = document.getElementById('preview-novas-grid');
+        const novasCount = document.getElementById('novas-count');
+
+        function getFotosCadastradasCount() {
+            const grid = document.getElementById('galeria-grid');
+            if (!grid) return 0;
+            return grid.querySelectorAll('.galeria-item').length;
+        }
+
+        function getVagasRestantes() {
+            const cadastradas = getFotosCadastradasCount();
+            return Math.max(0, LIMITE_MAXIMO - cadastradas);
+        }
+
+        function atualizarContadoresEdicao() {
+            const cadastradas = getFotosCadastradasCount();
+            const vagas = Math.max(0, LIMITE_MAXIMO - cadastradas);
+            
+            const countCadastradasEl = document.getElementById('count-cadastradas');
+            if (countCadastradasEl) countCadastradasEl.textContent = cadastradas;
+            
+            const vagasEl = document.getElementById('vagas-disponiveis');
+            if (vagasEl) vagasEl.textContent = vagas;
+
+            if (novasFotosDataTransfer.files.length > vagas) {
+                const novoDt = new DataTransfer();
+                Array.from(novasFotosDataTransfer.files).slice(0, vagas).forEach(f => novoDt.items.add(f));
+                novasFotosDataTransfer = novoDt;
+                if (inputGaleriaNovas) inputGaleriaNovas.files = novasFotosDataTransfer.files;
+                renderNovasFotosPreview();
+            }
+        }
+
+        function renderNovasFotosPreview() {
+            if (!previewNovasGrid) return;
+            previewNovasGrid.innerHTML = '';
+            const files = novasFotosDataTransfer.files;
+            if (novasCount) novasCount.textContent = files.length;
+
+            if (files.length === 0) {
+                if (previewNovasContainer) previewNovasContainer.style.display = 'none';
+                return;
+            }
+
+            if (previewNovasContainer) previewNovasContainer.style.display = 'block';
+
+            Array.from(files).forEach((file, index) => {
+                const item = document.createElement('div');
+                item.className = 'galeria-item';
+
+                const img = document.createElement('img');
+                img.src = URL.createObjectURL(file);
+                img.alt = `Nova Foto ${index + 1}`;
+
+                const btnRemover = document.createElement('button');
+                btnRemover.type = 'button';
+                btnRemover.className = 'btn-excluir-foto';
+                btnRemover.innerHTML = '✕';
+                btnRemover.title = 'Remover esta foto';
+                btnRemover.onclick = function() {
+                    removerNovaFoto(index);
+                };
+
+                item.appendChild(img);
+                item.appendChild(btnRemover);
+                previewNovasGrid.appendChild(item);
+            });
+        }
+
+        function removerNovaFoto(indexToRemove) {
+            const novoDt = new DataTransfer();
+            Array.from(novasFotosDataTransfer.files).forEach((file, index) => {
+                if (index !== indexToRemove) {
+                    novoDt.items.add(file);
+                }
+            });
+            novasFotosDataTransfer = novoDt;
+            if (inputGaleriaNovas) inputGaleriaNovas.files = novasFotosDataTransfer.files;
+            renderNovasFotosPreview();
+        }
+
+        if (inputGaleriaNovas) {
+            inputGaleriaNovas.addEventListener('change', function() {
+                const vagas = getVagasRestantes();
+                
+                if (vagas <= 0) {
+                    alert('O imóvel já possui 20 fotos (limite máximo). Para adicionar novas fotos, exclua algumas fotos da galeria acima primeiro.');
+                    this.value = '';
+                    novasFotosDataTransfer = new DataTransfer();
+                    this.files = novasFotosDataTransfer.files;
+                    renderNovasFotosPreview();
+                    return;
+                }
+                
+                const filesArray = Array.from(this.files).filter(f => f.type.startsWith('image/'));
+                
+                if (filesArray.length > vagas) {
+                    alert(`Você selecionou ${filesArray.length} fotos, mas só há ${vagas} vaga(s) disponível(is) (limite total de 20 fotos). Apenas as primeiras ${vagas} fotos foram adicionadas.`);
+                }
+                
+                const filesParaAdicionar = filesArray.slice(0, vagas);
+                
+                novasFotosDataTransfer = new DataTransfer();
+                filesParaAdicionar.forEach(file => {
+                    novasFotosDataTransfer.items.add(file);
+                });
+                
+                this.files = novasFotosDataTransfer.files;
+                renderNovasFotosPreview();
+            });
+        }
+
+        function mascaraMoeda(input) {
+            let valor = input.value.replace(/\D/g, '');
+            if (valor === "") { input.value = ""; return; }
+            input.value = Number(valor).toLocaleString('pt-BR');
+        }
+
+        function excluirFotoAjax(fotoId) {
+            fetch('/admin/excluir_foto/' + fotoId, {
+                method: 'GET'
+            }).then(response => {
+                if (response.ok) {
+                    const item = document.getElementById('foto-item-' + fotoId);
+                    if (item) {
+                        item.remove();
+                    }
+                    const galeriaGrid = document.getElementById('galeria-grid');
+                    const semFotosMsg = document.getElementById('sem-fotos-msg');
+                    if (galeriaGrid && galeriaGrid.children.length === 0) {
+                        galeriaGrid.style.display = 'none';
+                        if (semFotosMsg) semFotosMsg.style.display = 'block';
+                    }
+                    atualizarContadoresEdicao();
+                }
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            atualizarContadoresEdicao();
+            
+            const inputFoto = document.getElementById('input_foto');
+            if (inputFoto) {
+                inputFoto.addEventListener('change', function(event) {
+                    const file = event.target.files[0];
+                    if (!file) return;
+                    
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        const imgCrop = document.getElementById('image-to-crop');
+                        const cropBox = document.getElementById('cropBox');
+                        
+                        if (cropper) {
+                            cropper.destroy();
+                            cropper = null;
+                        }
+                        
+                        cropBox.style.display = 'block';
+                        cropBox.style.visibility = 'visible';
+                        imgCrop.src = e.target.result;
+                        
+                        setTimeout(() => {
+                            cropper = new Cropper(imgCrop, {
+                                aspectRatio: 1,
+                                viewMode: 1,
+                                autoCropArea: 0.8,
+                                responsive: true,
+                            });
+                        }, 100);
+                    };
+                    reader.readAsDataURL(file);
+                });
+            }
+        });
+
+        document.getElementById('btn-confirmar-corte').addEventListener('click', function() {
+            if (!cropper) return;
+            cropper.getCroppedCanvas({width: 800, height: 800}).toBlob(function(blob) {
+                imagemCortadaBlob = blob;
+                document.getElementById('img_atual').src = URL.createObjectURL(blob);
+                document.getElementById('cropBox').style.display = 'none';
+                cropper.destroy();
+                cropper = null;
+                alert('Corte atualizado com sucesso!');
+            }, 'image/jpeg', 0.9);
+        });
+
+        document.getElementById('form-editar').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+            
+            const precoInput = document.getElementById('preco_input');
+            let precoLimpo = precoInput.value.replace(/\./g, '').replace(',', '.');
+            formData.set('preco_num', precoLimpo);
+
+            formData.delete('input_foto');
+            
+            if (imagemCortadaBlob) {
+                formData.append('imagem_arquivo', imagemCortadaBlob, 'capa_cortada.jpg');
+            }
+
+            const vagas = getVagasRestantes();
+            if (novasFotosDataTransfer && novasFotosDataTransfer.files.length > 0) {
+                formData.delete('fotos_galeria');
+                const filesToSend = Array.from(novasFotosDataTransfer.files).slice(0, vagas);
+                filesToSend.forEach(file => {
+                    formData.append('fotos_galeria', file);
+                });
+            }
+
+            fetch(window.location.href, {
+                method: 'POST',
+                body: formData
+            }).then(response => {
+                if (response.ok) {
+                    window.location.href = '/admin';
+                }
+            });
+        });
+    </script>
+</body>
+</html>

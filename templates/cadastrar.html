@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cadastrar Imóvel</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Cadastrar Novo Imóvel</h1>
+        
+        <form action="{{ url_for('cadastrar') }}" method="POST" enctype="multipart/form-data">
+            <div class="form-group">
+                <label for="titulo">Título do Imóvel:</label>
+                <input type="text" id="titulo" name="titulo" required placeholder="Ex: Apartamento 3 quartos">
+            </div>
+
+            <div class="form-group">
+                <label for="preco">Preço Formatado:</label>
+                <input type="text" id="preco" name="preco" placeholder="Ex: R$ 350.000">
+            </div>
+
+            <div class="form-group">
+                <label for="preco_num">Preço para Ordenação (Numérico):</label>
+                <input type="number" step="0.01" id="preco_num" name="preco_num" placeholder="Ex: 350000">
+            </div>
+
+            <div class="form-group">
+                <label for="localizacao">Localização / Bairro:</label>
+                <input type="text" id="localizacao" name="localizacao" placeholder="Ex: Renascença">
+            </div>
+
+            <div class="form-group">
+                <label for="imagem_arquivo">Foto do Imóvel (Upload de Arquivo):</label>
+                <input type="file" id="imagem_arquivo" name="imagem_arquivo" accept="image/*" required>
+            </div>
+
+            <div class="form-group">
+                <label for="link">Link de Contato / Anúncio Externo (Opcional):</label>
+                <input type="url" id="link" name="link" placeholder="https://wa.me/...">
+            </div>
+
+            <div class="form-group">
+                <label for="descricao">Descrição do Imóvel:</label>
+                <textarea id="descricao" name="descricao" rows="4"></textarea>
+            </div>
+
+            <button type="submit" class="btn">Cadastrar Imóvel</button>
+            <a href="{{ url_for('index') }}" class="btn-cancelar">Voltar</a>
+        </form>
+    </div>
+</body>
+</html>

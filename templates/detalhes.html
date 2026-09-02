@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ imovel.titulo }} | {{ perfil.nome }}</title>
+    
+    <!-- FAVICON E ÍCONE DO APP MOBILE (PWA / ANDROID / IOS) -->
+    <link rel="icon" type="image/png" sizes="192x192" href="{{ url_for('static', filename='icon-192.png') }}">
+    <link rel="icon" type="image/png" sizes="512x512" href="{{ url_for('static', filename='icon-512.png') }}">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='balao_remax_icon.png') }}">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#3d6a9a">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="{{ perfil.nome }}">
+
+    <!-- META TAGS OPEN GRAPH (PREVIEW NO WHATSAPP E REDES SOCIAIS) -->
+    <meta property="og:type" content="article">
+    <meta property="og:title" content="{{ imovel.titulo }} - {{ imovel.preco }}">
+    <meta property="og:description" content="{{ imovel.localizacao }}{% if imovel.descricao %} | {{ imovel.descricao | truncate(140) }}{% endif %}">
+    <meta property="og:image" content="{{ request.url_root.rstrip('/') }}/static/{{ imovel.imagem }}">
+    <meta property="og:url" content="{{ request.url }}">
+    <meta name="twitter:card" content="summary_large_image">
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif; background-color: #f4f6f8; color: #333; line-height: 1.6; }
+        
+        .header { background: #fff; padding: 15px 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); position: sticky; top: 0; z-index: 100; display: flex; align-items: center; justify-content: space-between; }
+        .back-link { color: #3d6a9a; text-decoration: none; font-weight: 600; display: flex; align-items: center; gap: 8px; font-size: 14px; }
+        
+        .main-container { max-width: 900px; margin: 20px auto; padding: 0 15px; }
+
+        /* Carrossel na Proporção 4:3 */
+        .carousel-container { 
+            position: relative; 
+            width: 100%; 
+            aspect-ratio: 4 / 3; 
+            border-radius: 16px; 
+            overflow: hidden; 
+            box-shadow: 0 8px 24px rgba(0,0,0,0.12); 
+            margin-bottom: 25px; 
+            background: #000; 
+        }
+        
+        .carousel-slides { display: flex; height: 100%; overflow-x: auto; scroll-snap-type: x mandatory; scroll-behavior: smooth; -webkit-overflow-scrolling: touch; }
+        .carousel-slides::-webkit-scrollbar { display: none; }
+        .carousel-slides { -ms-overflow-style: none; scrollbar-width: none; }
+
+        .slide { flex: 0 0 100%; height: 100%; scroll-snap-align: start; position: relative; }
+        .slide img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+        /* Botões de Navegação (Setas) */
+        .carousel-btn { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(255, 255, 255, 0.85); color: #333; border: none; width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 10; transition: background 0.2s; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+        .carousel-btn:hover { background: #fff; }
+        .btn-prev { left: 15px; }
+        .btn-next { right: 15px; }
+
+        /* Contador de Fotos */
+        .foto-contador { position: absolute; top: 15px; right: 15px; background: rgba(0,0,0,0.65); color: #fff; padding: 4px 12px; border-radius: 20px; font-size: 13px; font-weight: 600; z-index: 10; backdrop-filter: blur(4px); }
+
+        /* Card de Informações */
+        .card-detalhes { background: #fff; border-radius: 16px; padding: 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.04); margin-bottom: 25px; }
+        .imovel-titulo { font-size: 26px; color: #1a1a1a; margin-bottom: 6px; }
+        .imovel-preco { font-size: 24px; font-weight: 800; color: #3d6a9a; margin-bottom: 12px; }
+
+        .imovel-local { color: #666; font-size: 15px; display: flex; align-items: center; gap: 6px; margin-bottom: 20px; }
+        .secao-titulo { font-size: 18px; color: #3d6a9a; font-weight: 700; margin-bottom: 12px; }
+        .descricao-texto { white-space: pre-line; color: #444; font-size: 15px; line-height: 1.7; }
+
+        /* Botão do WhatsApp */
+        .btn-whatsapp { display: flex; align-items: center; justify-content: center; gap: 10px; background: #25d366; color: white; text-decoration: none; padding: 16px; border-radius: 12px; font-size: 16px; font-weight: 700; text-align: center; margin-top: 25px; transition: background 0.2s; box-shadow: 0 4px 12px rgba(37, 211, 102, 0.3); }
+        .btn-whatsapp:hover { background: #1ebe57; }
+
+        @media (max-width: 600px) {
+            .card-detalhes { padding: 20px; }
+            .imovel-titulo { font-size: 21px; }
+            .imovel-preco { font-size: 20px; }
+            .carousel-btn { width: 36px; height: 36px; }
+        }
+    </style>
+</head>
+<body>
+
+    <header class="header">
+        <a href="/" class="back-link"><i class="fa-solid fa-arrow-left"></i> Voltar aos imóveis</a>
+        <span style="font-size: 13px; font-weight: 600; color: #666;">{{ perfil.corretora }}</span>
+    </header>
+
+    <div class="main-container">
+        
+        <!-- Carrossel Limpo (Fotos em 4:3) -->
+        <div class="carousel-container">
+            
+            {% set total_fotos = imovel.fotos | length if imovel.fotos else 1 %}
+            {% if imovel.fotos and imovel.fotos | length > 1 %}
+                <span class="foto-contador" id="contador-indicador">1 / {{ imovel.fotos | length }}</span>
+                <button class="carousel-btn btn-prev" onclick="mudarSlide(-1)"><i class="fa-solid fa-chevron-left"></i></button>
+                <button class="carousel-btn btn-next" onclick="mudarSlide(1)"><i class="fa-solid fa-chevron-right"></i></button>
+            {% endif %}
+
+            <div class="carousel-slides" id="carouselSlides" onscroll="atualizarContador()">
+                {% if imovel.fotos and imovel.fotos | length > 0 %}
+                    {% for foto in imovel.fotos %}
+                    <div class="slide">
+                        <img src="/static/{{ foto.caminho }}" alt="{{ imovel.titulo }}">
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="slide">
+                        <img src="/static/{{ imovel.imagem }}" alt="{{ imovel.titulo }}">
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="card-detalhes">
+            <!-- Título do Imóvel -->
+            <h1 class="imovel-titulo">{{ imovel.titulo }}</h1>
+            
+            <!-- Preço posicionado logo abaixo do Título -->
+            <div class="imovel-preco">{{ imovel.preco }}</div>
+
+            <!-- Localização -->
+            <p class="imovel-local"><i class="fa-solid fa-location-dot" style="color: #3d6a9a;"></i> {{ imovel.localizacao }}</p>
+
+            <h3 class="secao-titulo">Sobre o imóvel</h3>
+            <p class="descricao-texto">{{ imovel.descricao }}</p>
+
+            <a href="https://wa.me/{{ perfil.whatsapp }}?text=Olá,%20gostaria%20de%20saber%20mais%20sobre%20o%20imóvel%20{{ imovel.titulo | urlencode }}" target="_blank" class="btn-whatsapp">
+                <i class="fa-brands fa-whatsapp fa-lg"></i> Falar sobre este imóvel
+            </a>
+        </div>
+
+    </div>
+
+    <script>
+        const slidesContainer = document.getElementById('carouselSlides');
+
+        function mudarSlide(direcao) {
+            if (!slidesContainer) return;
+            const larguraSlide = slidesContainer.clientWidth;
+            slidesContainer.scrollBy({ left: direcao * larguraSlide, behavior: 'smooth' });
+        }
+
+        function atualizarContador() {
+            if (!slidesContainer) return;
+            const totalSlides = slidesContainer.querySelectorAll('.slide').length;
+            if (totalSlides <= 1) return;
+
+            const larguraSlide = slidesContainer.clientWidth;
+            const slideAtual = Math.round(slidesContainer.scrollLeft / larguraSlide) + 1;
+            const contador = document.getElementById('contador-indicador');
+            if (contador) {
+                contador.textContent = `${slideAtual} / ${totalSlides}`;
+            }
+        }
+    </script>
+</body>
+</html>

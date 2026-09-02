@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Adicionar Imóvel - {{ perfil.nome }}</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename=perfil.foto) }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f9f9f9; padding: 15px; margin: 0; }
+        .container { width: 100%; max-width: 500px; margin: 0 auto; background: white; padding: 25px 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+        h2 { color: #3d6a9a; margin-top: 0; text-align: center; font-size: 22px; }
+        .form-group { display: flex; flex-direction: column; margin-bottom: 15px; }
+        label { font-size: 13px; font-weight: bold; margin-bottom: 5px; color: #333; }
+        input, textarea { padding: 12px; border: 1px solid #ccc; border-radius: 8px; font-size: 15px; width: 100%; font-family: inherit; background: white; }
+        
+        .radio-group { display: flex; gap: 10px; margin-bottom: 15px; }
+        .radio-option { flex: 1; text-align: center; }
+        .radio-option input { display: none; }
+        .radio-option label { display: block; padding: 12px; border: 2px solid #ccc; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 13px; color: #555; transition: 0.2s; }
+        .radio-option input:checked + label { border-color: #3d6a9a; background: #3d6a9a; color: white; }
+
+        .foto-preview-box { display: flex; justify-content: center; margin-top: 10px; margin-bottom: 10px; }
+        #img_capa_preview { width: 120px; height: 120px; object-fit: cover; border-radius: 10px; border: 1px solid #ddd; }
+
+        .crop-container { width: 100%; background: #111; padding: 15px; border-radius: 12px; margin-bottom: 20px; text-align: center; }
+        .crop-wrapper { width: 100%; max-height: 400px; overflow: hidden; margin-bottom: 15px; border-radius: 8px; }
+        #image-to-crop { max-width: 100%; display: block; }
+
+        .galeria-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 10px; }
+        .galeria-item { position: relative; border-radius: 6px; overflow: hidden; }
+        .galeria-item img { width: 100%; height: 90px; object-fit: cover; border-radius: 6px; display: block; }
+        .btn-excluir-foto { position: absolute; top: 4px; right: 4px; background: rgba(220, 53, 69, 0.9); color: white; border: none; border-radius: 50%; width: 22px; height: 22px; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; text-decoration: none; padding: 0; line-height: 1; }
+        .btn-excluir-foto:hover { background: #dc3545; }
+        
+        button { width: 100%; padding: 14px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 15px; transition: 0.2s; }
+        .btn-salvar { background: #3d6a9a; color: white; margin-top: 10px; }
+        .btn-confirmar { background: #222; color: #fff; text-transform: uppercase; letter-spacing: 1px; font-size: 13px; }
+        .btn-voltar { display: block; text-align: center; margin-top: 20px; color: #3d6a9a; text-decoration: none; font-size: 14px; font-weight: 500; }
+        .help-text { font-size: 11px; color: #666; margin-top: 2px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Novo Imóvel</h2>
+        <form id="form-adicionar" method="POST" enctype="multipart/form-data">
+            
+            <label>Tipo de Cadastro:</label>
+            <div class="radio-group">
+                <div class="radio-option">
+                    <input type="radio" id="tipo_completo" name="tipo_cadastro" value="completo" checked onchange="alternarTipoCadastro()">
+                    <label for="tipo_completo">Cadastrar Imóvel</label>
+                </div>
+                <div class="radio-option">
+                    <input type="radio" id="tipo_link" name="tipo_cadastro" value="link" onchange="alternarTipoCadastro()">
+                    <label for="tipo_link">Link Existente</label>
+                </div>
+            </div>
+
+            <!-- FINALIDADE (VENDA / ALUGUEL) -->
+            <label>Finalidade:</label>
+            <div class="radio-group">
+                <div class="radio-option">
+                    <input type="radio" id="negocio_venda" name="negocio" value="venda" checked>
+                    <label for="negocio_venda">Venda</label>
+                </div>
+                <div class="radio-option">
+                    <input type="radio" id="negocio_aluguel" name="negocio" value="aluguel">
+                    <label for="negocio_aluguel">Aluguel</label>
+                </div>
+            </div>
+
+            <!-- FOTO DE CAPA -->
+            <div class="form-group">
+                <label>Foto de Capa:</label>
+                <input type="file" id="input_foto" accept="image/*" required>
+                <div class="foto-preview-box" id="preview-capa-box" style="display: none;">
+                    <img id="img_capa_preview" alt="Prévia da Capa">
+                </div>
+            </div>
+
+            <!-- Container do Corte -->
+            <div class="crop-container" id="cropBox" style="display: none;">
+                <div class="crop-wrapper">
+                    <img id="image-to-crop" src="">
+                </div>
+                <button type="button" id="btn-confirmar-corte" class="btn-confirmar">Cortar Capa</button>
+            </div>
+
+            <!-- CAMPOS BÁSICOS -->
+            <div class="form-group">
+                <label>Título:</label>
+                <input type="text" name="titulo" required>
+            </div>
+            
+            <div class="form-group">
+                <label>Preço:</label>
+                <input type="text" id="preco_input" name="preco_num" required oninput="mascaraMoeda(this)" placeholder="Ex: 450.000">
+            </div>
+            
+            <div class="form-group">
+                <label>Localização:</label>
+                <input type="text" name="localizacao" required>
+            </div>
+
+            <!-- TIPO: CADASTRO COMPLETO -->
+            <div id="secao-completo">
+                <div class="form-group">
+                    <label>Fotos Adicionais (Galeria - Máximo 20 fotos):</label>
+                    <input type="file" id="input_galeria" name="fotos_galeria" accept="image/*" multiple required>
+                    <span class="help-text">Você pode selecionar até 20 fotos para a galeria.</span>
+                    
+                    <div id="galeria-preview-container" style="display: none; margin-top: 12px;">
+                        <label style="font-size: 12px; color: #555;">Fotos selecionadas (<span id="galeria-count">0</span> / 20):</label>
+                        <div class="galeria-grid" id="galeria-preview-grid"></div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Descrição do Imóvel:</label>
+                    <textarea id="input_descricao" name="descricao" rows="4" placeholder="Detalhes do imóvel..." required></textarea>
+                </div>
+            </div>
+
+            <!-- TIPO: LINK EXISTENTE -->
+            <div id="secao-link" style="display: none;">
+                <div class="form-group">
+                    <label>Link Externo do Imóvel:</label>
+                    <input type="text" id="input_link_externo" name="link" placeholder="Ex: https://remax.com.br/imovel">
+                </div>
+            </div>
+
+            <button type="submit" class="btn-salvar">Salvar Imóvel</button>
+        </form>
+        <a href="/admin" class="btn-voltar">← Voltar para o painel</a>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+    <script>
+        const LIMITE_MAXIMO = 20;
+        let cropper;
+        let imagemCortadaBlob = null;
+        let galeriaDataTransfer = new DataTransfer();
+
+        const inputGaleria = document.getElementById('input_galeria');
+        const galeriaPreviewContainer = document.getElementById('galeria-preview-container');
+        const galeriaPreviewGrid = document.getElementById('galeria-preview-grid');
+        const galeriaCount = document.getElementById('galeria-count');
+
+        function renderGaleriaPreview() {
+            galeriaPreviewGrid.innerHTML = '';
+            const files = galeriaDataTransfer.files;
+            galeriaCount.textContent = files.length;
+
+            if (files.length === 0) {
+                galeriaPreviewContainer.style.display = 'none';
+                return;
+            }
+
+            galeriaPreviewContainer.style.display = 'block';
+
+            Array.from(files).forEach((file, index) => {
+                const item = document.createElement('div');
+                item.className = 'galeria-item';
+
+                const img = document.createElement('img');
+                img.src = URL.createObjectURL(file);
+                img.alt = `Foto ${index + 1}`;
+
+                const btnRemover = document.createElement('button');
+                btnRemover.type = 'button';
+                btnRemover.className = 'btn-excluir-foto';
+                btnRemover.innerHTML = '✕';
+                btnRemover.title = 'Remover esta foto';
+                btnRemover.onclick = function() {
+                    removerFotoGaleria(index);
+                };
+
+                item.appendChild(img);
+                item.appendChild(btnRemover);
+                galeriaPreviewGrid.appendChild(item);
+            });
+        }
+
+        function removerFotoGaleria(indexToRemove) {
+            const novoDt = new DataTransfer();
+            Array.from(galeriaDataTransfer.files).forEach((file, index) => {
+                if (index !== indexToRemove) {
+                    novoDt.items.add(file);
+                }
+            });
+            galeriaDataTransfer = novoDt;
+            inputGaleria.files = galeriaDataTransfer.files;
+            renderGaleriaPreview();
+        }
+
+        if (inputGaleria) {
+            inputGaleria.addEventListener('change', function() {
+                const filesArray = Array.from(this.files).filter(f => f.type.startsWith('image/'));
+                
+                if (filesArray.length > LIMITE_MAXIMO) {
+                    alert(`O limite máximo é de ${LIMITE_MAXIMO} fotos. Apenas as primeiras ${LIMITE_MAXIMO} fotos foram adicionadas.`);
+                }
+                
+                const filesParaAdicionar = filesArray.slice(0, LIMITE_MAXIMO);
+                
+                galeriaDataTransfer = new DataTransfer();
+                filesParaAdicionar.forEach(file => {
+                    galeriaDataTransfer.items.add(file);
+                });
+                
+                this.files = galeriaDataTransfer.files;
+                renderGaleriaPreview();
+            });
+        }
+
+        function alternarTipoCadastro() {
+            const isCompleto = document.getElementById('tipo_completo').checked;
+            const secaoCompleto = document.getElementById('secao-completo');
+            const secaoLink = document.getElementById('secao-link');
+            
+            const inputLink = document.getElementById('input_link_externo');
+            const inputGaleria = document.getElementById('input_galeria');
+            const inputDescricao = document.getElementById('input_descricao');
+
+            if (isCompleto) {
+                secaoCompleto.style.display = 'block';
+                secaoLink.style.display = 'none';
+                
+                inputLink.removeAttribute('required');
+                inputGaleria.setAttribute('required', 'required');
+                inputDescricao.setAttribute('required', 'required');
+            } else {
+                secaoCompleto.style.display = 'none';
+                secaoLink.style.display = 'block';
+                
+                inputLink.setAttribute('required', 'required');
+                inputGaleria.removeAttribute('required');
+                inputDescricao.removeAttribute('required');
+            }
+        }
+
+        function mascaraMoeda(input) {
+            let valor = input.value.replace(/\D/g, '');
+            if (valor === "") { input.value = ""; return; }
+            input.value = Number(valor).toLocaleString('pt-BR');
+        }
+
+        // Configuração segura do evento para o input de foto
+        document.addEventListener('DOMContentLoaded', function() {
+            const inputFoto = document.getElementById('input_foto');
+            if (inputFoto) {
+                inputFoto.addEventListener('change', function(event) {
+                    const file = event.target.files[0];
+                    if (!file) return;
+                    
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        const imgCrop = document.getElementById('image-to-crop');
+                        const cropBox = document.getElementById('cropBox');
+                        
+                        if (cropper) {
+                            cropper.destroy();
+                            cropper = null;
+                        }
+                        
+                        cropBox.style.setProperty('display', 'block', 'important');
+                        imgCrop.src = e.target.result;
+                        
+                        requestAnimationFrame(() => {
+                            cropper = new Cropper(imgCrop, {
+                                aspectRatio: 1,
+                                viewMode: 1,
+                                dragMode: 'move',
+                                guides: true,
+                                center: true,
+                                autoCropArea: 1,
+                                cropBoxMovable: false,
+                                cropBoxResizable: false
+                            });
+                        });
+                    };
+                    reader.readAsDataURL(file);
+                });
+            }
+        });
+
+        document.getElementById('btn-confirmar-corte').addEventListener('click', function() {
+            if (!cropper) return;
+            cropper.getCroppedCanvas({width: 800, height: 800}).toBlob(function(blob) {
+                imagemCortadaBlob = blob;
+                const imgPreview = document.getElementById('img_capa_preview');
+                if (imgPreview) {
+                    imgPreview.src = URL.createObjectURL(blob);
+                }
+                const previewCapaBox = document.getElementById('preview-capa-box');
+                if (previewCapaBox) {
+                    previewCapaBox.style.display = 'flex';
+                }
+                document.getElementById('cropBox').style.display = 'none';
+                cropper.destroy();
+                cropper = null;
+                alert('Corte realizado com sucesso!');
+            }, 'image/jpeg', 0.9);
+        });
+
+        document.getElementById('form-adicionar').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            if (!imagemCortadaBlob) {
+                alert('Por favor, selecione e clique em "Cortar Capa" antes de salvar.');
+                return;
+            }
+
+            const isCompleto = document.getElementById('tipo_completo').checked;
+            if (isCompleto) {
+                if (!galeriaDataTransfer.files || galeriaDataTransfer.files.length === 0) {
+                    alert('Por favor, selecione ao menos uma foto para a galeria.');
+                    return;
+                }
+            }
+
+            const formData = new FormData(this);
+            
+            const precoInput = document.getElementById('preco_input');
+            let precoLimpo = precoInput.value.replace(/\./g, '').replace(',', '.');
+            formData.set('preco_num', precoLimpo);
+
+            formData.delete('input_foto');
+            formData.append('imagem_arquivo', imagemCortadaBlob, 'capa_cortada.jpg');
+
+            if (isCompleto && galeriaDataTransfer.files.length > 0) {
+                formData.delete('fotos_galeria');
+                const filesToSend = Array.from(galeriaDataTransfer.files).slice(0, LIMITE_MAXIMO);
+                filesToSend.forEach(file => {
+                    formData.append('fotos_galeria', file);
+                });
+            }
+
+            fetch(window.location.href, {
+                method: 'POST',
+                body: formData
+            }).then(response => {
+                if (response.ok) {
+                    window.location.href = '/admin';
+                }
+            });
+        });
+
+        alternarTipoCadastro();
+    </script>
+</body>
+</html>
